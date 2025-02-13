@@ -1,0 +1,12 @@
+# config/services.yaml
+services:
+    sicoob_bundle.utils:
+        class: ThomasSens\SicoobBundle\Service\Utils
+        public: true
+        arguments: ['@logger']
+
+    sicoob_bundle.sicoob_client:
+        class: ThomasSens\SicoobBundle\Service\SicoobClient
+        public: true
+        arguments: ['@parameter_bag','@logger','@sicoob_bundle.utils']
+

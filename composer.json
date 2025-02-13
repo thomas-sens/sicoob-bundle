@@ -1,0 +1,34 @@
+{
+    "name": "thomas-sens/sicoob-bundle",
+    "type": "symfony-bundle",
+    "minimum-stability": "stable",
+    "version": "1.0.0",
+    "require": {
+        "php": ">=8.2",
+        "guzzlehttp/guzzle": "^7.9",
+        "symfony/framework-bundle": "^7.1",
+        "symfony/dotenv": "^7.1",
+        "symfony/monolog-bundle": "^3.10",
+        "symfony/http-kernel": "^7.1",
+        "symfony/serializer": "^7.1"
+    },
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Thomas Alexandre Sens",
+            "email": "thomas.sens@gmail.com"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "ThomasSens\\SicoobBundle\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "ThomasSens\\SicoobBundle\\Tests\\": "tests/"
+        }
+    },
+    "config": {
+    }
+}
