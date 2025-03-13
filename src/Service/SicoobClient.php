@@ -2,6 +2,7 @@
 
 namespace ThomasSens\SicoobBundle\Service;
 
+use Exception;
 use GuzzleHttp\Client as GClient;
 use GuzzleHttp\Exception\RequestException;
 use Psr\Log\LoggerInterface;
@@ -50,7 +51,7 @@ class SicoobClient
      * @param array|null $data Dados a serem enviados no corpo da requisição (para métodos POST).
      * @return mixed|null O resultado da deserialização ou null em caso de falha.
      */
-    private function makeRequest(string $method, string $url, array $data = null, ?string $class)
+    private function makeRequest(string $method, string $url, ?array $data = null, ?string $class = null)
     {
         try {
             $options = [
@@ -75,7 +76,14 @@ class SicoobClient
                 if ($class==null) {
                     return $response->getBody()->getContents();
                 } else {
-                    return $this->utils->convertArrayToCLass(json_decode($response->getBody(),true)['resultado'], $class);
+                    try {
+                        return $this->utils->convertArrayToCLass(json_decode($response->getBody(),true)['resultado'], $class);
+                    } catch (Exception $e) {
+                        $this->logger->error($e->getMessage());
+                        $this->logger->error("Erro ao converter o retorno do endpoint para o objeto $class: " . $response->getBody()->getContents());
+                        throw new Exception($e);
+                    }
+                    
                 }
             }
 
@@ -85,6 +93,7 @@ class SicoobClient
             if ($e->hasResponse()) {
                 $this->utils->trataResposta($e->getResponse(), $method);
             }
+            throw new Exception($e);
         }
 
         return null;
