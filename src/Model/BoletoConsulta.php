@@ -40,4 +40,21 @@ class BoletoConsulta
     public string $descricaoInstrucaoValorMinMax;
     public bool $bloquearPagamento;
     public ?string $mensagemBloqueioPagamento;
+
+    // Getters e Setters
+    public function __call(string $name, array $arguments)
+    {
+        if (str_starts_with($name, 'get')) {
+            $property = lcfirst(substr($name, 3));
+            if (property_exists($this, $property)) {
+                return $this->$property;
+            }
+        } elseif (str_starts_with($name, 'set')) {
+            $property = lcfirst(substr($name, 3));
+            if (property_exists($this, $property) && count($arguments) === 1) {
+                $this->$property = $arguments[0];
+            }
+        }
+        throw new \BadMethodCallException("Método {$name} não encontrado.");
+    }
 }
