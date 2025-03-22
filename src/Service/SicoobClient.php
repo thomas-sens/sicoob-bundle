@@ -20,6 +20,8 @@ class SicoobClient
     private $logger;
     private $client;
     private $utils;
+    private $certificado_pfx;
+    private $certificado_senha;
 
     public function __construct(ParameterBagInterface $parameter, LoggerInterface $logger, Utils $utils)
     {
@@ -31,14 +33,16 @@ class SicoobClient
         $this->client = new GClient(['verify' => false]);
     }
 
-    public function consultarBoleto(string $codigoBarras, Int $numeroConta, String $dataPagamento): BoletoConsulta {
-
+    public function consultarBoleto(string $codigoBarras, Int $numeroConta, string $dataPagamento, string $certificado_pfx, string $certificado_senha): BoletoConsulta {
+        $this->certificado_pfx = $certificado_pfx;
+        $this->certificado_senha = $certificado_senha;
         $url = $this->api_url . "/cobranca-bancaria-pagamentos/v3/boletos/$codigoBarras?numeroConta=$numeroConta&dataPagamento=$dataPagamento";
         return $this->makeRequest('GET', $url, null, BoletoConsulta::class);
     }
 
-    public function pagarBoleto(string $codigoBarras, BoletoPagamento $boletoPagamento) {
-
+    public function pagarBoleto(string $codigoBarras, BoletoPagamento $boletoPagamento, string $certificado_pfx, string $certificado_senha) {
+        $this->certificado_pfx = $certificado_pfx;
+        $this->certificado_senha = $certificado_senha;
         $url = $this->api_url . "/cobranca-bancaria-pagamentos/v3/boletos/pagamentos/$codigoBarras";
         return $this->makeRequest('POST', $url, $boletoPagamento->toArray() , ComprovantePagamento::class);
     }
@@ -61,8 +65,8 @@ class SicoobClient
                     'Authorization' => 'Bearer '.$this->api_token,
                     'client_id' => $this->client_id,
                     'x-idempotency-key' => 'UUID'
-
-                ]
+                ],
+                'cert' => [$this->certificado_pfx, $this->certificado_senha]
             ];
 
             if ($data !== null) {
