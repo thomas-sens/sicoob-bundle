@@ -57,4 +57,45 @@ class BoletoConsulta
         }
         throw new \BadMethodCallException("Método {$name} não encontrado.");
     }
+
+    public function getValorBoleto(): float
+    {
+        return $this->valorBoleto;
+    }
+
+    public function setValorBoleto(float $valorBoleto): void
+    {
+        $this->valorBoleto = $valorBoleto;
+    }
+
+    public function getValorAbatimentoDesconto(): float
+    {
+        return $this->valorAbatimentoDesconto;
+    }
+
+    public function setValorAbatimentoDesconto(float $valorAbatimentoDesconto): void
+    {
+        $this->valorAbatimentoDesconto = $valorAbatimentoDesconto;
+    }
+
+    public function getValorMultaMora(): float
+    {
+        return $this->valorMultaMora;
+    }
+
+    public function setValorMultaMora(float $valorMultaMora): void
+    {
+        $this->valorMultaMora = $valorMultaMora;
+    }
+
+    public function getValorPagamento(): float
+    {
+        return $this->valorPagamento;
+    }
+
+    public function setValorPagamento(float $valorPagamento): void
+    {
+        $this->valorPagamento = $valorPagamento;
+    }
+
 }

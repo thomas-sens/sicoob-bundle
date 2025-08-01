@@ -40,7 +40,7 @@ class SicoobClient
         return $this->makeRequest('GET', $url, null, BoletoConsulta::class);
     }
 
-    public function pagarBoleto(string $codigoBarras, BoletoPagamento $boletoPagamento, string $certificado_pfx, string $certificado_senha) {
+    public function pagarBoleto(string $codigoBarras, BoletoPagamento $boletoPagamento, string $certificado_pfx, string $certificado_senha): ComprovantePagamento {
         $this->certificado_pfx = $certificado_pfx;
         $this->certificado_senha = $certificado_senha;
         $url = $this->api_url . "/cobranca-bancaria-pagamentos/v3/boletos/pagamentos/$codigoBarras";
