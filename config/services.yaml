@@ -5,8 +5,22 @@ services:
         public: true
         arguments: ['@logger']
 
-    sicoob_bundle.sicoob_client:
-        class: ThomasSens\SicoobBundle\Service\SicoobClient
+    sicoob_bundle.request_service:
+        class: ThomasSens\SicoobBundle\Service\RequestService
         public: true
         arguments: ['@parameter_bag','@logger','@sicoob_bundle.utils']
 
+    sicoob_bundle.boleto_service:
+        class: ThomasSens\SicoobBundle\Service\BoletoService
+        public: true
+        arguments: ['@sicoob_bundle.request_service', '@parameter_bag']
+
+    sicoob_bundle.pix_service:
+        class: ThomasSens\SicoobBundle\Service\PixService
+        public: true
+        arguments: ['@sicoob_bundle.request_service', '@parameter_bag']
+
+    sicoob_bundle.sicoob_client:
+        class: ThomasSens\SicoobBundle\Service\SicoobClient
+        public: true
+        arguments: ['@sicoob_bundle.boleto_service', '@sicoob_bundle.pix_service']

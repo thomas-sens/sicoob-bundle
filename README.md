@@ -26,7 +26,13 @@ class SicoobController extends AbstractController
     #[Route('/sicoob', name: 'app_sicoob')]
     public function index(SicoobClient $sicoob): Response
     {
-        ... AGUARDANDO 
+        // Boleto
+        $sicoob->boleto->consultarBoleto($codigoBarras, $numeroConta, $dataPagamento);
+        $sicoob->boleto->pagarBoleto($codigoBarras, $boletoPagamento);
+
+        // Pix
+        $sicoob->pix->criarCobranca($cobrancaImediata); 
+        $sicoob->pix->consultarCobranca($txid, $revisao)
     }
 }
 ```
