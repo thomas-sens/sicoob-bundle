@@ -3,82 +3,165 @@
 namespace ThomasSens\SicoobBundle\Service;
 
 use Exception;
+use GuzzleHttp\Client as GClient;
 use GuzzleHttp\Exception\RequestException;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
-use GuzzleHttp\Client as GClient;
+use Symfony\Contracts\Cache\CacheInterface;
+use Symfony\Contracts\Cache\ItemInterface;
+use ThomasSens\SicoobBundle\Model\Pix\Problema;
 
-class RequestService {
-
-    private $api_token;
-    private $client_id;
-    private $client;
+class RequestService
+{
+    private GClient $client;
+    private string $clientId;
+    private string $clientSecret;
+    private string $authUrl;      // endpoint de autenticação do Sicoob
+    private string $certPath;     // caminho do certificado PFX
+    private string $certPassword; // senha do certificado
+    private string $environment;  // <- sandbox ou production
 
     public function __construct(
-        private ParameterBagInterface $parameter, 
-        private LoggerInterface $logger, 
+        private LoggerInterface $logger,
+        private CacheInterface $cache,
         private Utils $utils,
+        private ParameterBagInterface $params
     ) {
-        $this->api_token = $parameter->get('sicoob.api_token');
-        $this->client_id = $parameter->get('sicoob.client_id');
+        $this->environment = $this->params->get("sicoob.environment");
+        $this->clientId = $this->params->get("sicoob.client_id");
+        $this->clientSecret = $this->params->get("sicoob.client_secret");
+        $this->certPath = $this->params->get("sicoob.cert_path");
+        $this->certPassword = $this->params->get("sicoob.cert_password");
+        $this->authUrl =$this->params->get("sicoob.environments.production.auth_url");
         $this->client = new GClient(['verify' => false]);
     }
+
     /**
-     * Faz uma requisição HTTP e trata a resposta.
-     *
-     * @param string $method O método HTTP (GET, POST, etc.).
-     * @param string $url O URL da requisição.
-     * @param array|null $data Dados a serem enviados no corpo da requisição (para métodos POST).
-     * @return mixed|null O resultado da deserialização ou null em caso de falha.
+     * Obtém e guarda o token de acesso no cache
      */
-    public function makeRequest(string $method, string $url, ?array $data = null, ?string $class = null)
+    private function getApiToken(): string
+    {
+        // Se for sandbox, retorna token fixo
+        if ($this->environment === 'sandbox') {
+            return 'TOKEN_SANDBOX_FIXO';
+        }
+
+        return $this->cache->get('sicoob.api_token', function (ItemInterface $item) {
+            // cache por 4 minutos (token dura ~5min)
+            $item->expiresAfter(240);
+
+            $response = $this->client->post($this->authUrl, [
+                'form_params' => [
+                    'grant_type' => 'client_credentials',
+                    'client_id' => $this->clientId,
+                    'client_secret' => $this->clientSecret,
+                ],
+                'cert' => [$this->certPath, $this->certPassword],
+            ]);
+
+            $data = json_decode($response->getBody()->getContents(), true);
+
+            if (!isset($data['access_token'])) {
+                throw new Exception("Erro ao obter access_token do Sicoob");
+            }
+
+            return $data['access_token'];
+        });
+    }
+
+    /**
+     * Faz uma requisição HTTP para a API Sicoob
+     */
+    public function makeRequest(string $method, string $url, ?array $data = null): array
     {
         try {
             $options = [
                 'headers' => [
                     'Content-Type' => 'application/json',
                     'Accept' => 'application/json',
-                    'Authorization' => 'Bearer '.$this->api_token,
-                    'client_id' => $this->client_id,
+                    'Authorization' => 'Bearer ' . $this->getApiToken(),
+                    'client_id' => $this->clientId,
                     'x-idempotency-key' => 'UUID'
                 ],
-                //'cert' => [$this->certificado_pfx, $this->certificado_senha]
             ];
 
+            // só adiciona certificado se não for sandbox
+            if ($this->environment !== 'sandbox') {
+                $options['cert'] = [$this->certPath, $this->certPassword];
+            }
+            
             if ($data !== null) {
                 $options['json'] = $data;
             }
 
             $response = $this->client->request($method, $url, $options);
+
             $statusCode = $response->getStatusCode();
+            $body = (string) $response->getBody()->getContents();
 
-            if ($statusCode >= 200 && $statusCode < 300) {
-                if ($class==null) {
-                    return $response->getBody()->getContents();
-                } else {
-                    try {
-                        $retorno = json_decode($response->getBody(),true);
-                        if (isset($retorno['resultado'])) $retorno = $retorno['resultado'];
-                        return $this->utils->convertArrayToCLass($retorno, $class);
-                    } catch (Exception $e) {
-                        $this->logger->error($e->getMessage());
-                        $this->logger->error("Erro ao converter o retorno do endpoint para o objeto $class: " . $response->getBody()->getContents());
-                        throw new Exception($e);
-                    }
-                    
-                }
-            }
-
-            $this->utils->trataResposta($response, $method);
+            $decoded = json_decode($body, true);
+            return is_array($decoded) ? $decoded : ['body'=>$body, 'status'=>$statusCode];
+            
         } catch (RequestException $e) {
             $this->logger->error("Erro na requisição: " . $e->getMessage());
             if ($e->hasResponse()) {
-                $this->utils->trataResposta($e->getResponse(), $method);
+                $this->logger->error("Resposta: " . $e->getResponse()->getBody()->getContents());
             }
-            throw new Exception($e);
+            throw $e;
         }
-
-        return null;
     }
 
+    /**
+     * Faz a requisição e converte o resultado em um objeto da classe informada
+     *
+     * @param string $method   Método HTTP (GET, POST, etc.)
+     * @param string $url      URL da API
+     * @param array|null $data Dados a enviar no corpo da requisição
+     * @param string $class    Classe de destino para conversão
+     * @return object|null     Instância da classe informada ou null
+     * @throws Exception
+     */
+    public function makeRequestObject(string $method, string $url, ?array $data, ?string $class): ?object
+    {
+        $result = $this->makeRequest($method, $url, $data);
+
+        // Se não houver resultado, cria Problema genérico
+        if (isset($result['body'])) {
+            return new Problema(
+                type: '',
+                title: 'Erro de requisição',
+                status: $result['status'],
+                detail: $result['body'],
+                correlationId: null,
+                violacoes: []
+            );
+        }
+
+        // Normaliza o body caso venha dentro de 'resultado'
+        if (isset($result['resultado'])) {
+            $result = $result['resultado'];
+        }
+
+        // Se o status indicar erro (4xx ou 5xx), retorna Problema
+        if (isset($result['status']) && ($result['status'] >= 400 && $result['status'] < 600)) {
+            return Problema::fromArray($result);
+        }
+
+        // Caso normal, converte para a classe desejada
+        try {
+            if (isset($class)) return $this->utils->convertArrayToClass($result, $class);
+            return null;
+        } catch (Exception $e) {
+            $this->logger->error("Erro ao converter resultado em objeto $class: " . $e->getMessage());
+            return new Problema(
+                type: '',
+                title: 'Erro ao converter objeto',
+                status: 0,
+                detail: $e->getMessage(),
+                correlationId: null,
+                violacoes: []
+            );
+        }
+    }
+       
 }

@@ -1,4 +1,14 @@
 # config/services.yaml
+
+parameters:
+    sicoob.environments.production.auth_url: https://auth.sicoob.com.br/auth/realms/cooperado/protocol/openid-connect/token
+    sicoob.environments.production.pix_recebimentos: 'https://api.sicoob.com.br/pix/api/v2'
+    sicoob.environments.production.pix_pagamentos: 'https://api.sicoob.com.br/pix-pagamentos/v2'
+    sicoob.environments.production.cobranca_bancaria: 'https://api.sicoob.com.br/pagamentos/v3'
+    sicoob.environments.sandbox.pix_recebimentos: 'https://sandbox.sicoob.com.br/sicoob/sandbox/pix/api/v2'
+    sicoob.environments.sandbox.pix_pagamentos: 'https://sandbox.sicoob.com.br/sicoob/sandbox/pix-pagamentos/v2'
+    sicoob.environments.sandbox.cobranca_bancaria: 'https://sandbox.sicoob.com.br/sicoob/sandbox/cobranca-bancaria-pagamentos/v3'
+
 services:
     sicoob_bundle.utils:
         class: ThomasSens\SicoobBundle\Service\Utils
@@ -7,16 +17,20 @@ services:
 
     sicoob_bundle.request_service:
         class: ThomasSens\SicoobBundle\Service\RequestService
-        public: true
-        arguments: ['@parameter_bag','@logger','@sicoob_bundle.utils']
-
-    sicoob_bundle.boleto_service:
-        class: ThomasSens\SicoobBundle\Service\BoletoService
-        public: true
-        arguments: ['@sicoob_bundle.request_service', '@parameter_bag']
+        arguments:
+            $logger: '@logger'
+            $cache: '@cache.app'
+            $utils: '@sicoob_bundle.utils'
+            $params: '@parameter_bag'
 
     sicoob_bundle.pix_service:
         class: ThomasSens\SicoobBundle\Service\PixService
+        arguments:
+            $requestService: '@sicoob_bundle.request_service'
+            $params: '@parameter_bag'
+
+    sicoob_bundle.boleto_service:
+        class: ThomasSens\SicoobBundle\Service\BoletoService
         public: true
         arguments: ['@sicoob_bundle.request_service', '@parameter_bag']
 

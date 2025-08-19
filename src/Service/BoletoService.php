@@ -8,23 +8,24 @@ use ThomasSens\SicoobBundle\Model\Boleto\ComprovantePagamento;
 
 class BoletoService {
 
-    private $api_url;
+    private string $apiCobrancaBancaria;
 
     public function __construct(
         private RequestService $requestService,
-        private ParameterBagInterface $parameter
+        private ParameterBagInterface $params
     ) {
-        $this->api_url = $parameter->get('sicoob.api_url');
+        $env = $this->params->get("sicoob.environment");
+        $this->apiCobrancaBancaria = $this->params->get("sicoob.environments.$env.cobranca_bancaria");
     }
 
     public function consultarBoleto(string $codigoBarras, Int $numeroConta, string $dataPagamento): BoletoConsulta {
-        $url = $this->api_url . "/cobranca-bancaria-pagamentos/v3/boletos/$codigoBarras?numeroConta=$numeroConta&dataPagamento=$dataPagamento";
-        return $this->requestService->makeRequest('GET', $url, null, BoletoConsulta::class);
+        $url = $this->apiCobrancaBancaria . "/boletos/$codigoBarras?numeroConta=$numeroConta&dataPagamento=$dataPagamento";
+        return $this->requestService->makeRequestObject('GET', $url, null, BoletoConsulta::class);
     }
 
     public function pagarBoleto(string $codigoBarras, BoletoPagamento $boletoPagamento): ComprovantePagamento {
-        $url = $this->api_url . "/cobranca-bancaria-pagamentos/v3/boletos/pagamentos/$codigoBarras";
-        return $this->requestService->makeRequest('POST', $url, $boletoPagamento->toArray() , ComprovantePagamento::class);
+        $url = $this->apiCobrancaBancaria . "/boletos/pagamentos/$codigoBarras";
+        return $this->requestService->makeRequestObject('POST', $url, $boletoPagamento->toArray() , ComprovantePagamento::class);
     }
 
     public function criarBoleto() {

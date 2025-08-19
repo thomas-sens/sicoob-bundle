@@ -6,20 +6,19 @@ class CobrancaImediata
 {
     public function __construct(
         public Calendario $calendario,
-        public ?string $txid,
-        public ?int $revisao,
-        public ?Devedor $devedor = null,
-        public ?Loc $loc = null,
-        public ?string $location = null,
-        public ?string $status,
+        public Devedor $devedor,
+        public Loc $loc,
         public Valor $valor,
-        public ?string $brcode = null,
-        public string $chave,
-        public ?string $solicitacaoPagador = null,
         /** @var InfoAdicional[]|null */
-        public ?array $infoAdicionais = null
+        public array $infoAdicionais,
+        public string $chave,
+        public string $solicitacaoPagador,
+        public ?string $txid = null,
+        public ?int $revisao = null,
+        public ?string $location = null,
+        public ?string $status = null,
+        public ?string $brcode = null,
     ) {}
-    
 
     public function toArray(): array
     {
