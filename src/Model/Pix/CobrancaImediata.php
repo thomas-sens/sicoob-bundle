@@ -22,9 +22,8 @@ class CobrancaImediata
 
     public function toArray(): array
     {
-        return [
+        $ret = [
             'calendario' => $this->calendario->toArray(),
-            'txid' => $this->txid,
             'revisao' => $this->revisao,
             'devedor' => $this->devedor?->toArray(),
             'loc' => $this->loc?->toArray(),
@@ -38,6 +37,8 @@ class CobrancaImediata
                 ? array_map(fn ($info) => $info instanceof InfoAdicional ? $info->toArray() : $info, $this->infoAdicionais)
                 : null,
         ];
+        if ($this->txid) $ret['txid'] = $this->txid;
+        return $ret;
     }
 
 }

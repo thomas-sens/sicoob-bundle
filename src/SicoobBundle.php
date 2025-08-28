@@ -19,8 +19,8 @@ class SicoobBundle extends AbstractBundle
                 ->children()
                 ->scalarNode('environment')->isRequired()->end()
                 ->scalarNode('client_id')->isRequired()->end()
-                ->scalarNode('client_secret')->isRequired()->end()
                 ->scalarNode('cert_path')->isRequired()->end()
+                ->scalarNode('cert_key')->isRequired()->end()
                 ->scalarNode('cert_password')->isRequired()->end()
             ->end();
     }

@@ -31,6 +31,23 @@ class PixService {
         return $this->requestService->makeRequestObject('GET', $url, null, CobrancaImediata::class);
     }
 
+    public function consultarListaCobranca(): CobrancaImediata|Problema {
+        $agora = new \DateTimeImmutable('now', new \DateTimeZone('UTC')); 
+        $inicio = $agora->sub(new \DateInterval('P7D')); // últimos 30 dias
+
+        $inicioStr = $inicio->format('Y-m-d\TH:i:s\Z'); // ex: 2025-07-28T00:00:00Z
+        $fimStr    = $agora->format('Y-m-d\TH:i:s\Z');  // ex: 2025-08-27T17:43:00Z
+
+        $url = sprintf(
+            "%s/cob?inicio=%s&fim=%s&paginacao.paginaAtual=0&paginacao.itensPorPagina=100",
+            $this->apiUrlRecebimentos,
+            $inicioStr,
+            $fimStr
+        );
+
+        return $this->requestService->makeRequestObject('GET', $url, null, CobrancaImediata::class);
+    }
+
     public function criarWebhookPagamentos(Webhook $webhook): CobrancaImediata|Problema {
         $url = $this->apiUrlPagamentos . "/pagamentos/webhook";
         return $this->requestService->makeRequestObject('PUT', $url, $webhook->toArray(), null);

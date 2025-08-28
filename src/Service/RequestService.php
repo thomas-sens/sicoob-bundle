@@ -15,9 +15,9 @@ class RequestService
 {
     private GClient $client;
     private string $clientId;
-    private string $clientSecret;
     private string $authUrl;      // endpoint de autenticação do Sicoob
-    private string $certPath;     // caminho do certificado PFX
+    private string $certPath;     // cert.pem
+    private string $certKey;      // key.pem
     private string $certPassword; // senha do certificado
     private string $environment;  // <- sandbox ou production
 
@@ -29,9 +29,9 @@ class RequestService
     ) {
         $this->environment = $this->params->get("sicoob.environment");
         $this->clientId = $this->params->get("sicoob.client_id");
-        $this->clientSecret = $this->params->get("sicoob.client_secret");
         $this->certPath = $this->params->get("sicoob.cert_path");
         $this->certPassword = $this->params->get("sicoob.cert_password");
+        $this->certKey = $this->params->get("sicoob.cert_key");
         $this->authUrl =$this->params->get("sicoob.environments.production.auth_url");
         $this->client = new GClient(['verify' => false]);
     }
@@ -54,9 +54,10 @@ class RequestService
                 'form_params' => [
                     'grant_type' => 'client_credentials',
                     'client_id' => $this->clientId,
-                    'client_secret' => $this->clientSecret,
+                    'scope' => 'cob.read cob.write cobv.write cobv.read lotecobv.write lotecobv.read pix.write pix.read webhook.read webhook.write payloadlocation.write payloadlocation.read',
                 ],
-                'cert' => [$this->certPath, $this->certPassword],
+                'cert'    => $this->certPath,
+                'ssl_key' => [$this->certKey, $this->certPassword],
             ]);
 
             $data = json_decode($response->getBody()->getContents(), true);
@@ -87,9 +88,10 @@ class RequestService
 
             // só adiciona certificado se não for sandbox
             if ($this->environment !== 'sandbox') {
-                $options['cert'] = [$this->certPath, $this->certPassword];
+                $options['cert'] = $this->certPath;
+                $options['ssl_key'] = [$this->certKey, $this->certPassword];
             }
-            
+
             if ($data !== null) {
                 $options['json'] = $data;
             }
@@ -97,19 +99,39 @@ class RequestService
             $response = $this->client->request($method, $url, $options);
 
             $statusCode = $response->getStatusCode();
-            $body = (string) $response->getBody()->getContents();
+            $body = (string) $response->getBody(); // cast direto, evita problemas com getContents() esvaziado
 
             $decoded = json_decode($body, true);
-            return is_array($decoded) ? $decoded : ['body'=>$body, 'status'=>$statusCode];
-            
+
+            return is_array($decoded) ? $decoded : ['body' => $body, 'status' => $statusCode];
+
         } catch (RequestException $e) {
-            $this->logger->error("Erro na requisição: " . $e->getMessage());
+            $body = null;
+
             if ($e->hasResponse()) {
-                $this->logger->error("Resposta: " . $e->getResponse()->getBody()->getContents());
+                $body = (string) $e->getResponse()->getBody(); // lê todo o conteúdo
+                $decoded = json_decode($body, true);
+
+                $this->logger->error('Erro na requisição Sicoob', [
+                    'status' => $e->getResponse()->getStatusCode(),
+                    'body' => $decoded ?? $body, // se JSON válido, loga como array
+                    'url' => $url,
+                    'method' => $method,
+                    'request_data' => $data,
+                ]);
+            } else {
+                $this->logger->error('Erro na requisição Sicoob sem resposta', [
+                    'exception' => $e->getMessage(),
+                    'url' => $url,
+                    'method' => $method,
+                    'request_data' => $data,
+                ]);
             }
+
             throw $e;
         }
     }
+
 
     /**
      * Faz a requisição e converte o resultado em um objeto da classe informada
