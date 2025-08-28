@@ -23,14 +23,25 @@ class Calendario
             throw new \InvalidArgumentException("Data de criação não informada no calendário.");
         }
 
-        // cria DateTime a partir da string
-        $dataCriacao = new \DateTime($this->criacao);
+        $dataCriacao = new \DateTime($this->criacao, new \DateTimeZone('UTC'));
 
         // soma a expiração em segundos (se houver)
         $vencimento = $this->expiracao !== null
             ? $dataCriacao->add(new \DateInterval('PT' . $this->expiracao . 'S'))
             : $dataCriacao;
 
+        $vencimento->setTimezone(new \DateTimeZone('America/Sao_Paulo'));
+        
         return $vencimento;
+    }
+
+    public function getCriacao(): \DateTime
+    {
+
+        $dataCriacao = new \DateTime($this->criacao, new \DateTimeZone('UTC'));
+
+        $dataCriacao->setTimezone(new \DateTimeZone('America/Sao_Paulo'));
+        
+        return $dataCriacao;
     }
 }

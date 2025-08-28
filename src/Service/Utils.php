@@ -1,12 +1,15 @@
 <?php
 namespace ThomasSens\SicoobBundle\Service;
 
+use Exception;
 use Symfony\Component\Serializer\Encoder\JsonEncoder;
 use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
 use Symfony\Component\Serializer\Serializer;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\StreamInterface;
 use Psr\Log\LoggerInterface;
+use ThomasSens\SicoobBundle\Model\Pix\Problema;
+
 class Utils
 {
     private $logger;
@@ -35,11 +38,23 @@ class Utils
 
     public function convertArraYToClass(array $data, string $class): ?object
     {
-        $serializer = new Serializer([new ObjectNormalizer()], [new JsonEncoder()]);
-        // Read the response data as string
-        $responseDataString = json_encode($data);
-        // Deserialize the JSON to the specified class
-        return $serializer->deserialize($responseDataString, $class, 'json');
+        try{ 
+            $serializer = new Serializer([new ObjectNormalizer()], [new JsonEncoder()]);
+            // Read the response data as string
+            $responseDataString = json_encode($data);
+            // Deserialize the JSON to the specified class
+            return $serializer->deserialize($responseDataString, $class, 'json');
+        } catch (Exception $e) {
+            $this->logger->error("Erro ao converter resultado em objeto $class: " . $e->getMessage());
+            return new Problema(
+                type: '',
+                title: 'Erro ao converter objeto',
+                status: 0,
+                detail: $e->getMessage(),
+                correlationId: null,
+                violacoes: []
+            );
+        }
     }
 
     /**

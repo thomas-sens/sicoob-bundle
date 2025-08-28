@@ -31,21 +31,30 @@ class PixService {
         return $this->requestService->makeRequestObject('GET', $url, null, CobrancaImediata::class);
     }
 
-    public function consultarListaCobranca(): CobrancaImediata|Problema {
+    public function consultarListaCobranca(): Problema|array {
         $agora = new \DateTimeImmutable('now', new \DateTimeZone('UTC')); 
         $inicio = $agora->sub(new \DateInterval('P7D')); // últimos 30 dias
 
         $inicioStr = $inicio->format('Y-m-d\TH:i:s\Z'); // ex: 2025-07-28T00:00:00Z
         $fimStr    = $agora->format('Y-m-d\TH:i:s\Z');  // ex: 2025-08-27T17:43:00Z
-
+        
         $url = sprintf(
-            "%s/cob?inicio=%s&fim=%s&paginacao.paginaAtual=0&paginacao.itensPorPagina=100",
+            "%s/cob?inicio=%s&fim=%s",
             $this->apiUrlRecebimentos,
             $inicioStr,
             $fimStr
         );
 
-        return $this->requestService->makeRequestObject('GET', $url, null, CobrancaImediata::class);
+        return $this->requestService->makeRequestObject('GET', $url, null, CobrancaImediata::class, true);
+    }
+
+    public function consultarWebhooks(): array {
+        $agora = new \DateTimeImmutable('now', new \DateTimeZone('UTC')); 
+        $url = sprintf(
+            "%s/webhook",
+            $this->apiUrlRecebimentos
+        );
+        return $this->requestService->makeRequest('GET', $url);
     }
 
     public function criarWebhookPagamentos(Webhook $webhook): CobrancaImediata|Problema {
@@ -53,9 +62,15 @@ class PixService {
         return $this->requestService->makeRequestObject('PUT', $url, $webhook->toArray(), null);
     }
 
-    public function criarWebhookRecebimentos(Webhook $webhook, string $chave): ?Problema
+    public function criarWebhookRecebimentos(Webhook $webhook, string $chave): Problema|array
     {
         $url = $this->apiUrlRecebimentos . "/webhook/$chave";
         return $this->requestService->makeRequestObject('PUT', $url, $webhook->toArray(), null);
     }
+
+    public function gerarQrcode(string $txid): array {
+        $url = $this->apiUrlRecebimentos . "/cob/$txid/imagem";
+        return $this->requestService->makeRequest('GET', $url, null);
+    }
+
 }

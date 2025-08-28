@@ -9,6 +9,7 @@ use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 use Symfony\Contracts\Cache\CacheInterface;
 use Symfony\Contracts\Cache\ItemInterface;
+use ThomasSens\SicoobBundle\Model\Pix\CobrancaImediata;
 use ThomasSens\SicoobBundle\Model\Pix\Problema;
 
 class RequestService
@@ -143,12 +144,31 @@ class RequestService
      * @return object|null     Instância da classe informada ou null
      * @throws Exception
      */
-    public function makeRequestObject(string $method, string $url, ?array $data, ?string $class): ?object
+    public function makeRequestObject(string $method, string $url, ?array $data, ?string $class, bool $asArray = false): array|object|null
     {
         $result = $this->makeRequest($method, $url, $data);
+        if ($class === null) {
+            return $result;
+        }
 
-        // Se não houver resultado, cria Problema genérico
-        if (isset($result['body'])) {
+        // Se o status indicar erro (4xx ou 5xx), retorna Problema
+        if (isset($result['status']) && ($result['status'] >= 400 && $result['status'] < 600)) {
+            return Problema::fromArray($result);
+        }
+
+        return $this->tratarParticularidadesClasse($result, $class, $asArray);
+
+    }
+       
+    private function tratarParticularidadesClasse(array $result, string $class, bool $asArray): array|object|null {
+        if ($asArray && $class === CobrancaImediata::class && isset($result['cobs'])) {
+            return array_map(
+                fn(array $item) => $this->utils->convertArrayToClass($item, $class),
+                $result['cobs']
+            );
+        } elseif (isset($result['resultado'])) {
+            return $this->utils->convertArrayToClass($result['resultado'], $class);
+        } elseif (isset($result['body'])) {
             return new Problema(
                 type: '',
                 title: 'Erro de requisição',
@@ -157,33 +177,8 @@ class RequestService
                 correlationId: null,
                 violacoes: []
             );
-        }
-
-        // Normaliza o body caso venha dentro de 'resultado'
-        if (isset($result['resultado'])) {
-            $result = $result['resultado'];
-        }
-
-        // Se o status indicar erro (4xx ou 5xx), retorna Problema
-        if (isset($result['status']) && ($result['status'] >= 400 && $result['status'] < 600)) {
-            return Problema::fromArray($result);
-        }
-
-        // Caso normal, converte para a classe desejada
-        try {
-            if (isset($class)) return $this->utils->convertArrayToClass($result, $class);
-            return null;
-        } catch (Exception $e) {
-            $this->logger->error("Erro ao converter resultado em objeto $class: " . $e->getMessage());
-            return new Problema(
-                type: '',
-                title: 'Erro ao converter objeto',
-                status: 0,
-                detail: $e->getMessage(),
-                correlationId: null,
-                violacoes: []
-            );
+        } else {
+            return $this->utils->convertArrayToClass($result, $class);
         }
     }
-       
 }
