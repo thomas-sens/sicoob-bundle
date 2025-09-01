@@ -26,8 +26,8 @@ class PixService {
         return $this->requestService->makeRequestObject('POST', $url, $cobrancaImediata->toArray(), CobrancaImediata::class);
     }
 
-    public function consultarCobranca(string $txid, int $revisao): CobrancaImediata|Problema {
-        $url = $this->apiUrlRecebimentos . "/cob/$txid?revisao=$revisao";
+    public function consultarCobranca(string $txid): CobrancaImediata|Problema {
+        $url = $this->apiUrlRecebimentos . "/cob/$txid";
         return $this->requestService->makeRequestObject('GET', $url, null, CobrancaImediata::class);
     }
 
