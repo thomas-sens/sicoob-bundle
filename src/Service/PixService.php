@@ -2,6 +2,7 @@
 
 namespace ThomasSens\SicoobBundle\Service;
 
+use DateTimeImmutable;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 use ThomasSens\SicoobBundle\Model\Pix\CobrancaImediata;
 use ThomasSens\SicoobBundle\Model\Pix\Problema;
@@ -31,12 +32,10 @@ class PixService {
         return $this->requestService->makeRequestObject('GET', $url, null, CobrancaImediata::class);
     }
 
-    public function consultarListaCobranca(): Problema|array {
-        $agora = new \DateTimeImmutable('now', new \DateTimeZone('UTC')); 
-        $inicio = $agora->sub(new \DateInterval('P7D')); // últimos 30 dias
+    public function consultarListaCobranca(DateTimeImmutable $inicio, DateTimeImmutable $fim): Problema|array {
 
-        $inicioStr = $inicio->format('Y-m-d\TH:i:s\Z'); // ex: 2025-07-28T00:00:00Z
-        $fimStr    = $agora->format('Y-m-d\TH:i:s\Z');  // ex: 2025-08-27T17:43:00Z
+        $inicioStr = $inicio->format('Y-m-d\TH:i:s\Z');
+        $fimStr    = $fim->format('Y-m-d\TH:i:s\Z');
         
         $url = sprintf(
             "%s/cob?inicio=%s&fim=%s",
