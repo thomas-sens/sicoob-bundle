@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Enum;
+namespace ThomasSens\SicoobBundle\Enum;
 
 enum StatusCobrancaImediata: string
 {

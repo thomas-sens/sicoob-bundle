@@ -2,11 +2,15 @@
 
 namespace ThomasSens\SicoobBundle\Service;
 
+use ThomasSens\SicoobBundle\Model\Pix\Pix;
 use DateTimeImmutable;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
+use Symfony\Component\HttpFoundation\Request;
+use ThomasSens\SicoobBundle\Factory\PixFactory;
 use ThomasSens\SicoobBundle\Model\Pix\CobrancaImediata;
 use ThomasSens\SicoobBundle\Model\Pix\Problema;
 use ThomasSens\SicoobBundle\Model\Pix\Webhook;
+use ThomasSens\SicoobBundle\Service\SicoobLogService;
 
 class PixService {
 
@@ -15,7 +19,8 @@ class PixService {
 
     public function __construct(
         private RequestService $requestService,
-        private ParameterBagInterface $params
+        private ParameterBagInterface $params,
+        private SicoobLogService $sicoobLogService,
     ) {
         $env = $this->params->get("sicoob.environment");
         $this->apiUrlRecebimentos = $this->params->get("sicoob.environments.$env.pix_recebimentos");
@@ -72,4 +77,18 @@ class PixService {
         return $this->requestService->makeRequest('GET', $url, null);
     }
 
+    /**
+     * @return Pix[]
+     */
+    public function obterRetornoWebhook(Request $request): array
+    {
+        $retorno = $request->query->all();
+        if ($request->getMethod() === 'POST') {
+            $retorno = json_decode($request->getContent(), true) ?? [];
+        }
+
+        $this->sicoobLogService->logarPayload($retorno);
+
+        return PixFactory::converteRequestParaPix($retorno);
+    }
 }

@@ -86,5 +86,4 @@ class Utils
             $this->logger->info("Resposta vazia recebida com status code: $statusCode");
         }
     }
-
 }

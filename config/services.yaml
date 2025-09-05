@@ -15,6 +15,12 @@ services:
         public: true
         arguments: ['@logger']
 
+    sicoob_bundle.log_service:
+        class: ThomasSens\SicoobBundle\Service\SicoobLogService
+        public: true
+        arguments:
+            $logger: '@monolog.logger.sicoob'
+
     sicoob_bundle.request_service:
         class: ThomasSens\SicoobBundle\Service\RequestService
         arguments:
@@ -28,6 +34,7 @@ services:
         arguments:
             $requestService: '@sicoob_bundle.request_service'
             $params: '@parameter_bag'
+            $sicoobLogService: '@sicoob_bundle.log_service'
 
     sicoob_bundle.boleto_service:
         class: ThomasSens\SicoobBundle\Service\BoletoService
